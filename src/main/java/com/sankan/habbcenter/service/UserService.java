@@ -4,6 +4,8 @@ import com.sankan.habbcenter.model.domain.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.util.List;
+
 /**
  * 用户服务
  *
@@ -31,4 +33,20 @@ public interface UserService extends IService<User> {
      * @return 脱敏后的用户信息
      */
     public User userLogin(String userAccount, String userPassword, HttpServletRequest request);
+
+    /**
+     * 对用户信息进行脱敏
+     *
+     * @param originUser 脱敏前的用户信息
+     * @return 脱敏后的用户信息
+     */
+    public User getSaftyUser(User originUser);
+
+    /**
+     * 根据标签搜索用户 内存查询版
+     *
+     * @param tagNameList 用户需要拥有的标签列表
+     * @return
+     */
+    public List<User> searchUserByTagsByMem(List<String> tagNameList);
 }

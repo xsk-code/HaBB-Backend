@@ -1,8 +1,9 @@
 package com.sankan.habbcenter.service.impl;
-import java.util.Date;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.sankan.habbcenter.model.domain.User;
 import com.sankan.habbcenter.service.UserService;
 import com.sankan.habbcenter.mapper.UserMapper;
@@ -11,10 +12,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 用户服务实现类
@@ -118,22 +125,85 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
 
         // 3、用户脱敏
-        User safetyUser = new User();
-        safetyUser.setId(user.getId());
-        safetyUser.setUsername(user.getUsername());
-        safetyUser.setUserAccount(user.getUserAccount());
-        safetyUser.setAvatarUrl(user.getAvatarUrl());
-        safetyUser.setGender(user.getGender());
-        safetyUser.setPhone(user.getPhone());
-        safetyUser.setEmail(user.getEmail());
-        safetyUser.setUserStatus(user.getUserStatus());
-        safetyUser.setCreateTime(user.getCreateTime());
-        safetyUser.setTags(user.getTags());
+        User safetyUser = getSaftyUser(user);
 
         // 4、记录用户登录态
         request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
 
         return safetyUser;
+    }
+
+    @Override
+    public User getSaftyUser(User originUser) {
+        if (originUser == null) {
+            return null;
+        }
+
+        User safetyUser = new User();
+        safetyUser.setId(originUser.getId());
+        safetyUser.setUsername(originUser.getUsername());
+        safetyUser.setUserAccount(originUser.getUserAccount());
+        safetyUser.setAvatarUrl(originUser.getAvatarUrl());
+        safetyUser.setGender(originUser.getGender());
+        safetyUser.setPhone(originUser.getPhone());
+        safetyUser.setEmail(originUser.getEmail());
+        safetyUser.setUserStatus(originUser.getUserStatus());
+        safetyUser.setCreateTime(originUser.getCreateTime());
+        safetyUser.setTags(originUser.getTags());
+        return safetyUser;
+    }
+
+    /**
+     * 根据标签搜索用户 SQL查询版
+     *
+     * @param tagNameList 用户需要拥有的标签列表
+     */
+    // 暂时舍弃SQL查询方式
+    @Deprecated
+    private List<User> searchUserByTagsBySQL(List<String> tagNameList) {
+        if (CollectionUtils.isEmpty(tagNameList)) {
+            return null;
+        }
+
+        // 方式一: SQL查询
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        // 拼接 Add 查询
+        // like '%Java%' and like '%Python%'
+        for (String tagName : tagNameList) {
+            queryWrapper = queryWrapper.like("tags", tagName);
+        }
+        List<User> userList = userMapper.selectList(queryWrapper);
+        return userList.stream().map(this::getSaftyUser).collect(Collectors.toList());
+    }
+
+
+    @Override
+    public List<User> searchUserByTagsByMem(List<String> tagNameList) {
+        if (CollectionUtils.isEmpty(tagNameList)) {
+            return null;
+        }
+
+        // 方式二：内存查询
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        // 查询所有用户
+        List<User> userList = userMapper.selectList(queryWrapper);
+        Gson gson = new Gson();
+        // 在内存中判断是否包含要求的标签
+        return userList.stream().filter(user -> {
+            String tagStr = user.getTags();
+            if(StringUtils.isBlank(tagStr)) {
+                return false;
+            }
+            Set<String> tempTagNameSet = gson.fromJson(tagStr, new TypeToken<Set<String>>() {}.getType());
+            // 集合判空
+            tempTagNameSet = Optional.ofNullable(tempTagNameSet).orElse(new HashSet<>());
+            for(String tagName : tagNameList) {
+                if(!tempTagNameSet.contains(tagName)) {
+                    return false;
+                }
+            }
+            return true;
+        }).map(this::getSaftyUser).collect(Collectors.toList());
     }
 }
 

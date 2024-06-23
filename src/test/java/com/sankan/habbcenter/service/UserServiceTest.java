@@ -1,5 +1,6 @@
 package com.sankan.habbcenter.service;
-import java.util.Date;
+import java.util.Arrays;
+import java.util.List;
 
 import com.sankan.habbcenter.model.domain.User;
 import jakarta.annotation.Resource;
@@ -59,5 +60,12 @@ public class UserServiceTest {
         checkPassword = "12345678";
         result = userService.userRegister(userAccount, userPassword, checkPassword);
         Assertions.assertTrue(result > 0);
+    }
+
+    @Test
+    public void searchUserByTags() {
+        List<String> tagNameList = Arrays.asList("Java", "Python");
+        List<User> userList = userService.searchUserByTagsByMem(tagNameList);
+        Assertions.assertNotNull(userList);
     }
 }

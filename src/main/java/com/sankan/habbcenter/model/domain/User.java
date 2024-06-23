@@ -2,6 +2,7 @@ package com.sankan.habbcenter.model.domain;
 
 import com.baomidou.mybatisplus.annotation.*;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 import lombok.Data;
@@ -76,10 +77,11 @@ public class User implements Serializable {
     private Integer isDelete;
 
     /**
-     * 用户标签列表
+     * 用户标签列表 Json
      */
     private String tags;
 
+    @Serial
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
 }
